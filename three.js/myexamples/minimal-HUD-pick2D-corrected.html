@@ -19,17 +19,11 @@ class Button {
 	constructor (x, y, size){
 		this.centerX = x;  // HUD-coord
 		this.centerY = y;
-		this.size = size;
+		this.size = size;  // circle radius
 	}
-	d1To (v) { // 1-norm
-		return Math.abs (v[0]-this.centerX) + Math.abs(v[1]-this.centerY);
-	}
-	d2To (v) { // 2-norm: size = radius
+	d2To (v) { // 2-norm
 		return Math.sqrt ( (v[0]-this.centerX)*(v[0]-this.centerX) 
 				+ (v[1]-this.centerY)*(v[1]-this.centerY) );
-	}
-	dInfTo (v) { // inf-norm
-		return Math.max( Math.abs (v[0]-this.centerX), Math.abs(v[1]-this.centerY) )
 	}
 }
 
@@ -41,6 +35,8 @@ var arToolkitSource, arToolkitContext;
 var whRatio, halfW, halfH;
 var button1;
 var _iOSDevice;
+
+var down = false;
 
 init();
 animate();
@@ -84,12 +80,6 @@ function init() {
 	// for HUD scene
 	sceneHUD = new THREE.Scene();
 	
-	// eye-coordinate bounds
-/*	whRatio = 414/896;// official data
-	whRatio = 414/950;
-	whRatio = 414/2000;
-	whRatio = 6.4/10.7; // by measure
-*/
 	halfH = 10;
 	halfW = halfH * whRatio;
 	
@@ -97,12 +87,13 @@ function init() {
 
 	////////////////////////////////////////////////////
 	// create a button to toggle rotation
+    // pos, size are in HUD-coord
 	//
 	var buttonSize = halfH/3; // radius
 	button = new THREE.Mesh (new THREE.CircleGeometry (buttonSize, 20), 
 			new THREE.MeshBasicMaterial({color:"yellow", transparent:true, opacity:0.8}));	
 	button1 = new Button (0, -halfH/2, buttonSize);
-	button.position.set (button1.centerX, button1.centerY, 0); // HUD-coord
+	button.position.set (button1.centerX, button1.centerY, 0); 
 	sceneHUD.add (button);
 	
 	
@@ -149,9 +140,31 @@ function init() {
 	////////////////////////////////////////////////////////////////////////////////
 	//          Create a ArMarkerControls
 	////////////////////////////////////////////////////////////////////////////////
+	markerRoot = makeRoot();
+	scene.add(markerRoot);
+
+	//////////////////////////////////////////////////////////////////////////////////
+	//		render the whole thing on the page
+	//////////////////////////////////////////////////////////////////////////////////
+	stats = new Stats();
+	document.body.appendChild( stats.dom );
 	
-	markerRoot = new THREE.Group
-	scene.add(markerRoot)
+	// handle resize: can be iPAD change orientation
+	window.addEventListener('resize', function(){
+		onResize()
+	})
+	
+	if (_iOSDevice)
+    	window.addEventListener('touchstart', onTouchStart, false);
+	else {
+		window.addEventListener ('mousedown', onMouseDown, false);
+		window.addEventListener ('mouseup', onMouseUp, false);
+    }
+}
+
+function makeRoot() {
+	
+	let markerRoot = new THREE.Group();
 	var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
 		type : 'pattern',
 		patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/patt.hiro'
@@ -170,25 +183,9 @@ function init() {
 	mesh.position.y	= geometry.parameters.height/2
 		
 	markerRoot.add (mesh);
-
-	//////////////////////////////////////////////////////////////////////////////////
-	//		render the whole thing on the page
-	//////////////////////////////////////////////////////////////////////////////////
-	stats = new Stats();
-	document.body.appendChild( stats.dom );
-	
-
-	// handle resize: can be iPAD change orientation
-	window.addEventListener('resize', function(){
-		onResize()
-	})
-	
-	if (_iOSDevice)
-    	window.addEventListener('touchstart', onTouchStart, false);
-	else
-		window.addEventListener ('mousedown', onMouseDown, false);
-
+	return markerRoot;
 }
+
 
 function animate() {
 	stats.update();
@@ -204,6 +201,12 @@ function animate() {
 
 	if (cubeSpin)
 		mesh.rotation.x += 0.1
+		
+	if (down) {
+		$('#ratio').text ("down");
+	} else {
+		$('#ratio').text ("up");		
+	}
 	
 }
 	
@@ -214,12 +217,13 @@ function onResize(){
 		arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas)	
 	}	
 	
-	$('#ratio').text ('resize: width: ' + window.innerWidth + ' height: ' + window.innerHeight)
+	//$('#ratio').text ('resize: width: ' + window.innerWidth + ' height: ' + window.innerHeight)
+	// use 'ratio' to display down/up
 	
 	whRatio = window.innerWidth/window.innerHeight;
-//	whRatio = 404/2000;
 		console.log ('[onResize] width: ' + renderer.domElement.width)	
 		console.log ('[onResize] height: ' + renderer.domElement.height)	
+		console.log ('[onResize] whRatio: ' + whRatio)	
 	
 	 halfW = halfH * whRatio;
 	cameraHUD.left = -halfW;
@@ -236,13 +240,13 @@ function onResize(){
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 */  
-  //renderer.setSize(window.innerWidth, window.innerHeight);
-		
+ // renderer.setSize(window.innerWidth, window.innerHeight);
+//	renderer.setSize (renderer.domElement.width, renderer.domElement.height)	
 }
 	
 function pickCompute (ndcX, ndcY) {
 
-	// use 2D algorithm 
+	// use 2D algorithm, in HUD-coord
 	let HUD_coord = [halfW*ndcX, halfH*ndcY]
 		
 	let dist = button1.d2To (HUD_coord);	
@@ -259,13 +263,20 @@ function pickCompute (ndcX, ndcY) {
 
 }
 
+function onMouseUp (event) {
+	// do nothing yet ...
+	down = false;
+}
+
 function onMouseDown (event) {
 	console.log ('in mouse down')
 	event.preventDefault();
 	let ndcX = (event.clientX / window.innerWidth) * 2 - 1;
 	let ndcY = -(event.clientY / window.innerHeight) * 2 + 1;
 
-	pickCompute (ndcX, ndcY);		
+	pickCompute (ndcX, ndcY);	
+	
+	down = true;
 }	
 
 function onTouchStart (event) {
