@@ -16,11 +16,21 @@
 <script>
 
 class Button {
-	constructor (x, y, size){
-		this.centerX = x;  // HUD-coord
-		this.centerY = y;
+	constructor (cx, cy, size, colorString = 'yellow', map = null){
+		this.centerX = cx;  // HUD-coord
+		this.centerY = cy;
 		this.size = size;  // circle radius
+		let material = new THREE.MeshBasicMaterial({color: colorString, transparent: true, opacity:0.7});
+		if (map) 
+		   material.map = map;
+		this.mesh = new THREE.Mesh (new THREE.CircleGeometry (size, 36), material );
+	    this.mesh.position.set (cx, cy, 0);
 	}
+	
+	setLocation (lx, ly) { // 2D-HUD 
+	    this.mesh.position.set (lx, ly, 0);
+	}
+	
 	d2To (v) { // 2-norm
 		return Math.sqrt ( (v[0]-this.centerX)*(v[0]-this.centerX) 
 				+ (v[1]-this.centerY)*(v[1]-this.centerY) );
@@ -33,7 +43,7 @@ var mesh, button, markerRoot, cubeSpin = false;
 var arToolkitSource, arToolkitContext;
 /////////////
 var whRatio, halfW, halfH;
-var button1;
+var button1, button2;
 var _iOSDevice;
 
 var down = false;
@@ -85,17 +95,29 @@ function init() {
 	
 	cameraHUD = new THREE.OrthographicCamera (-halfW,halfW, halfH,-halfH, -10,10);
 
-	////////////////////////////////////////////////////
-	// create a button to toggle rotation
-    // pos, size are in HUD-coord
-	//
-	var buttonSize = halfH/3; // radius
-	button = new THREE.Mesh (new THREE.CircleGeometry (buttonSize, 20), 
-			new THREE.MeshBasicMaterial({color:"yellow", transparent:true, opacity:0.8}));	
-	button1 = new Button (0, -halfH/2, buttonSize);
-	button.position.set (button1.centerX, button1.centerY, 0); 
-	sceneHUD.add (button);
+	///////////////////////////////////////////////////////
 	
+	let loader = new THREE.TextureLoader();
+	loader.setCrossOrigin(''); // 重要！
+	loader.load(
+    	// resource URL
+    	'https://i.imgur.com/b6I5kb7.png',
+
+    	// Function when resource is loaded
+    	function(texture) {
+      		console.log ('texture loaded ...')
+			// texture load完，再建button
+			var buttonSize = halfH/3; // radius
+			button1 = new Button (halfW/2, -halfH/2, buttonSize, 'white', texture); 
+			sceneHUD.add (button1.mesh);
+    	},
+
+  	);
+  	
+	button2 = new Button (-halfW/2, -halfH/2, halfH/3, 'cyan'); 
+	sceneHUD.add (button2.mesh);
+  	
+  
 	
 	////////////////////////////////////////////////////////////////////////////////
 	//          handle arToolkitSource
@@ -154,9 +176,10 @@ function init() {
 		onResize()
 	})
 	
-	if (_iOSDevice)
+	if (_iOSDevice) {
     	window.addEventListener('touchstart', onTouchStart, false);
-	else {
+    	// touchend ... use the same callback as mouseup
+	} else {
 		window.addEventListener ('mousedown', onMouseDown, false);
 		window.addEventListener ('mouseup', onMouseUp, false);
     }
@@ -196,7 +219,12 @@ function animate() {
 
 	renderer.clear();
 	renderer.render (scene, camera);
-	button.material.visible = markerRoot.visible;
+	
+	// 重要：沒有marker, 就沒有button
+	button1.mesh.material.visible = markerRoot.visible;
+	button2.mesh.material.visible = markerRoot.visible;
+	
+	
 	renderer.render (sceneHUD, cameraHUD);
 
 	if (cubeSpin)
