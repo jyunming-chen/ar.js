@@ -182,12 +182,12 @@ function init() {
 	spinSpeed = 0;
 	
 	if (_iOSDevice) {
-    	window.addEventListener('touchstart', onTouchStart, false);
-    	window.addEventListener('touchend', onTouchEnd, false);
+    	document.addEventListener('touchstart', onTouchStart, false);
+    	document.addEventListener('touchend', onTouchEnd, false);
 	} else {
 
-		window.addEventListener ('mousedown', onMouseDown, false);
-		window.addEventListener ('mouseup', onMouseUp, false);
+		document.addEventListener ('mousedown', onMouseDown, false);
+		document.addEventListener ('mouseup', onMouseUp, false);
     }
 }
 
