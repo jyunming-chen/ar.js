@@ -136,12 +136,13 @@ function initialize()
 	
 	sceneGroup = new THREE.Group();
 	// a 1x1x1 cube model with scale factor 1.25 fills up the physical cube
-	sceneGroup.scale.set(1.25/2, 1.25/2, 1.25/2);
+	//sceneGroup.scale.set(1.25/2, 1.25/2, 1.25/2);
+	sceneGroup.scale.set(1.25/1, 1.25/1, 1.25/1);
 	
 	let loader = new THREE.TextureLoader();
 	loader.setCrossOrigin('');
 	
-	/*
+	
 	// a simple cube
 	let materialArray = [
 		new THREE.MeshBasicMaterial( { map: loader.load("images/xpos.png") } ),
@@ -152,12 +153,12 @@ function initialize()
 		new THREE.MeshBasicMaterial( { map: loader.load("images/zneg.png") } ),
 	];
 	let mesh = new THREE.Mesh( new THREE.CubeGeometry(1,1,1), materialArray );
-	sceneGroup.add( mesh );
-	*/
+	//sceneGroup.add( mesh );
+	
 	
 	//let tileTexture = loader.load("images/tiles.jpg");
 	let tileTexture = loader.load("https://i.imgur.com/7HRQP5T.jpg");
-/*	
+	
 	// reversed cube
 	sceneGroup.add( 
 		new THREE.Mesh(
@@ -168,7 +169,7 @@ function initialize()
 			})
 		)
 	);
-*/	
+	
 	// cube vertices
 	
 	let sphereGeometry = new THREE.SphereGeometry(0.20, 6,6);
@@ -227,7 +228,7 @@ function initialize()
 		edge.position.copy( edgeCenters[i] );
 		edge.rotation.setFromVector3( edgeRotations[i] );
 
-		//sceneGroup.add(edge);
+		sceneGroup.add(edge);
 	}
 	
 	sceneGroup.add(
@@ -249,12 +250,18 @@ function update()
 	if ( arToolkitSource.ready !== false )
 		arToolkitContext.update( arToolkitSource.domElement );
 	
+	let msg;
+	
 	for (let i = 0; i < 6; i++)
 	{
 		if ( markerRootArray[i].visible )
 		{
+			msg = i+' : '+ markerGroupArray[i].children.length;
 			markerGroupArray[i].add( sceneGroup );
-			console.log("visible: " + patternArray[i]);
+			// duplicated addition?!
+//			msg = i+' : '+ markerGroupArray[i].children.length;
+			//console.log("visible: " + patternArray[i]);
+			console.log (msg);
 			break;
 		}
 	}
